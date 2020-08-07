@@ -1,0 +1,288 @@
+#!/usr/bin/env python
+
+#####################################################################################################
+##
+##  beacon tool for debugging EL+ ontologies
+##
+##  author: Carlos Mencia
+##  colaborators: Joao Marques-Silva, Alexey Ignatiev, Fareed Arif, Rafael Penaloza, Norbert Manthey   
+##
+#####################################################################################################
+
+import sys
+import os
+
+class Config:
+	def __init__(self):
+		self.mode = "";
+		self.ontology_path = "";
+		self.name = "";
+		self.working_dir = "";
+		self.output_dir = "";
+		self.queries = ""
+		self.options = ""
+		self.configok = False;
+		self.path_wcnf_coi = ""
+		self.path_mod_coi = ""
+		self.outpath = ""
+		self.path_subont = ""
+		self.oopath = ""
+		self.owd = ""
+		self.hgmus_opt = ""
+		self.pp = False
+		self.smina = False
+
+	def print_config(self):
+		print "mode: " + self.mode
+		print "ontology_path: " + self.ontology_path
+		print "working_dir: " + self.working_dir
+		print "queries: " + self.queries
+		print "hgmus_opt: " + self.hgmus_opt
+		print "pp: " + str(self.pp)
+		print "smina: " + str(self.smina)
+
+	def read_command_line1(self, argv):
+		nargs = len(argv)
+		if(nargs < 5):
+			return False;
+
+	def read_command_line(self, argv):
+		nargs = len(sys.argv)
+		if(nargs < 5):
+			return False
+
+		if(argv[1] == "-enc"):
+			self.mode = "enc"
+			self.ontology_path = argv[2]
+			self.name = argv[3]
+			self.working_dir = argv[4]
+			if self.working_dir[len(self.working_dir)-1] == "/":
+				self.working_dir = self.working_dir[:-1]
+			self.configok = True;
+		
+		elif argv[1] == "-sol":
+			self.mode = "sol"
+			
+			i = 2;
+			while i < nargs:
+				if argv[i] == "-diag":
+					self.hgmus_opt += " -wmcs"
+				elif argv[i] == "-nmina":
+					self.hgmus_opt += " -nw"
+				elif argv[i] == "-t":
+					i = i + 1;
+					if i == nargs:
+						return False
+					self.hgmus_opt += " -T " + argv[i]
+				elif argv[i] == "-pp":
+					self.pp = True;
+				elif argv[i] == "-q":
+					i = i + 1
+					if i == nargs:
+						return False
+					self.queries = argv[i]
+				elif argv[i] == "-n":
+					i = i + 1
+					if i == nargs:
+						return False
+					self.name = argv[i]
+				elif argv[i] == "-wd":
+					i = i + 1
+					if i == nargs:
+						return False
+					self.working_dir = argv[i]
+					if self.working_dir[len(self.working_dir)-1]=="/":
+						self.working_dir = self.working_dir[:-1]
+				elif argv[i] == "-smina":
+					self.smina = True
+				else:
+					print "ERROR: Option " + argv[i] + " not available\n"
+					return False
+
+				i = i + 1
+
+		else:
+			return False;
+
+		if self.working_dir == "":
+			print "ERROR: <work_dir> missing\n"
+
+		if self.name == "":
+			print "ERROR: <name> missing\n"
+
+		if self.mode == "sol" and self.queries == "":
+			print "ERROR: -q <query-string> missing\n"
+			return False
+
+		if self.working_dir == "" or self.name == "":
+			return False
+
+		return True;
+		
+
+def print_header():
+	print "c BEACON: An Efficient SAT-Based Tool for Debugging EL+ Ontologies"
+	print "c "
+
+def print_help():
+	print "BEACON: An Efficient SAT-Based Tool for Debugging EL+ Ontologies"
+	print ""
+	print " *** Classification and Horn Encoding ***"
+	print "  usage: ./beacon -enc <ontology-path> <name> <work-dir>"
+	print "  where <ontology-path>: path to input ontology"
+	print "        <name>:          name to be used as prefix for files"
+	print "        <work-dir>:      output directory" 
+	print ""
+	print " *** Computation of minAs(MUS) and min diagnoses (MCS) ***"
+	print "  usage: ./beacon -sol [option+] -n <name> -wd <work-dir> -q <query-string>"
+	print "  where options include:"
+	print "        -t NNN:         indicate time limit (in seconds) [default: -t 3600]"
+	print "        -diag:          print diagnoses [default: false]"
+	print "        -nmina:         do not print MinAs [default: false]"
+	print "        -smina:         enumerate smallest MinAs [default: false]"
+	print "        -pp:            pretty output [default: false]"
+	print ""
+	print ""
+	print "author: C. Mencia (cmencia@gmail.com)"
+	print "collaborators: M. F. Arif, A. Ignatiev, N. Manthey, R. Penaloza, J. Marques-Silva"
+
+
+
+def encode_classification(config):
+	command = "mkdir -p " + config.working_dir + "/class/"
+	os.system(command)
+
+	command = "./tools/encoder " + config.ontology_path + " " + config.name + " " + config.working_dir + "/class/"
+	os.system(command)
+	#print command
+
+
+def gen_wcnf_formula(config):
+	path_cnf = config.working_dir + "/class/" + config.name + ".cnf"
+	path_assumps = config.working_dir + "/class/" + config.name + ".assump"
+
+	tokens = config.queries.split()
+	outpath = config.working_dir + "/instances/" + config.name
+	for t in tokens:
+	  outpath += "_" + t
+	outpath += "/"
+
+	config.outpath = outpath
+
+	command = "mkdir -p " + outpath
+	
+	os.system(command)
+
+	path_wcnf = outpath + config.name + ".coi.wcnf"
+	path_mod = outpath + config.name + ".coi.module"
+	
+	config.path_wcnf_coi = path_wcnf
+	config.path_mod_coi = path_mod
+
+
+	command = "./tools/optimizer " +  path_cnf + " " + path_assumps + " " + path_wcnf + " " + path_mod + " " + config.queries
+	os.system(command)
+	#print command
+
+
+def invoke_hgmus(config):
+	command = "./tools/hgmus " + config.hgmus_opt + " " + config.path_wcnf_coi
+
+	if(config.pp):
+		command += " | tail -f | ./tools/prettyprint " + config.owd + "/class/" + config.name + ".gci " + config.owd + "/class/" + config.name + ".ri"
+		print_header()
+	#print command
+	os.system(command)
+
+
+def extract_subontology(config):
+	path_axioms = config.working_dir + "/class/" + config.name + ".gci"
+	
+	path_subont = config.outpath + config.name + ".coi.krss"
+	config.path_subont = path_subont;
+
+	#print config.path_subont
+
+
+	f = open(path_subont, 'w')
+
+
+	for line in open(config.path_mod_coi):
+		axioms = line.split();
+		break;
+
+	for line in open(path_axioms):
+		tokens = line.split();
+		if tokens[0] in axioms:
+			result = "";
+			for t in tokens[1:]:
+				result += t + " ";
+			result +="\n"
+			f.write(result)
+			
+		
+	f.close();
+
+
+
+def match_queries(config):
+	queries = config.queries.split()
+	path_oclass = config.owd + "/class/" + config.name + ".class"
+	path_nclass = config.working_dir + "/class/" + config.name + ".class"
+
+	nqueries = " ";
+
+	for q in queries:
+		for line in open(path_oclass):
+			tokens = line.split()
+			if tokens[0] == q:
+				gci = ""
+				for t in tokens[1:]:
+					gci += t + " "
+				break
+
+		#print gci
+
+		for line in open(path_nclass):
+			if gci[:-1] in line:
+				tokens = line.split();
+				nqueries += tokens[0] + " "
+				  
+		#print nqueries
+		config.queries = nqueries;
+
+
+
+def gen_reduced_formula(config):
+	gen_wcnf_formula(config)
+	extract_subontology(config)
+
+	config.oopath = config.ontology_path
+	config.ontology_path = config.path_subont
+	config.owd = config.working_dir
+	config.working_dir = config.outpath[:-1]
+
+
+	encode_classification(config)
+	match_queries(config)
+
+
+
+def main():
+
+  config = Config()
+  if not config.read_command_line(sys.argv):
+  	print_help()
+	return
+  
+  #config.print_config()
+  
+
+  if(config.mode == "enc"):
+  	encode_classification(config)
+
+  if(config.mode == "sol"):
+	gen_reduced_formula(config)
+	invoke_hgmus(config)
+
+main()

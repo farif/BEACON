@@ -1,0 +1,6 @@
+(implies A B)
+(implies B C)
+(implies A D)
+(implies D C)
+(implies X1 X2)
+(implies X2 X3)

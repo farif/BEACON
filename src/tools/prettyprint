@@ -1,0 +1,51 @@
+#!/usr/bin/env python
+
+import sys
+import os
+
+
+class PrettyPrinter:
+	def __init__(self, fgcis, fris):
+		self.fgcis = fgcis
+		self.fris = fris
+		self.mgcis = {}
+		self.load_map(self.fgcis)
+		self.load_map(self.fris)
+
+	def load_map(self, fname):
+		for line in open(fname):
+			tokens = line.split()
+			s = ""
+			for t in tokens[1:]:
+		        	s += t + " "
+			self.mgcis[tokens[0]] = s
+
+
+
+
+
+def main():
+	pp = PrettyPrinter(sys.argv[1], sys.argv[2])
+
+	for line in sys.stdin:
+		if "c MCS:" in line: 
+			tokens = line.split()
+			result = "c Diagnosis: {\n"
+			for i in range(2, len(tokens)):
+				result += "c    " +  pp.mgcis[tokens[i]] + "\n"
+			result += "c }"
+			print result
+		elif "c MUS:" in line: 
+			tokens = line.split()
+			result = "c MinA: {\n"
+			for i in range(2, len(tokens)):
+				result += "c    " +  pp.mgcis[tokens[i]] + "\n"
+			result += "c }"
+			print result
+	
+
+main()
+
+
+
+
