@@ -11,4 +11,5 @@ justifications (MinAs) of EL + ontologies and MUSes of a Horn formula, and it
 integrates state-of-the-art algorithms for solving different function problems in
 the SAT domain.
 
-[]()
+
+![design-diagram](docs/beacon-diagram.png)
