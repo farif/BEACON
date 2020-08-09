@@ -1,4 +1,4 @@
-# BEACON (Consequence-based reasoning in Lightweight Description Logic EL+)
+# BEACON (### Consequence-based reasoning in Lightweight Description Logic EL+)
 
 Description Logics (DLs) are knowledge representation and reasoning
 formalisms widely used in many practical settings. Among them, the EL family
